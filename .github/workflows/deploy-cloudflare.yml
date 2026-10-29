@@ -4,9 +4,17 @@ on:
   push:
     branches: [ main ]
     paths:
+      - ".github/workflows/deploy-cloudflare.yml"
       - "mail-worker/**"
       - "mail-vue/**"
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-mail-production
+  cancel-in-progress: false
 
 jobs:
   Deploy-cloud-mail:
@@ -119,7 +127,6 @@ jobs:
           sed -i "s|\${CUSTOM_DOMAIN}|${CUSTOM_DOMAIN}|g" "$CONFIG_FILE"
           sed -i "s|\"\${DOMAIN}\"|${DOMAIN}|g" "$CONFIG_FILE"
           sed -i "s|\${ADMIN}|${ADMIN}|g" "$CONFIG_FILE"
-          sed -i "s|\${JWT_SECRET}|${JWT_SECRET}|g" "$CONFIG_FILE"
           sed -i "s|\${R2_BUCKET_NAME}|${R2_BUCKET_NAME}|g" "$CONFIG_FILE"
           sed -i "s|\${PROJECT_LINK}|${PROJECT_LINK}|g" "$CONFIG_FILE"
           sed -i "s|\${ANALYSIS_CACHE}|${ANALYSIS_CACHE}|g" "$CONFIG_FILE"
@@ -211,13 +218,14 @@ jobs:
         working-directory: ./mail-worker
         run: |
           echo "🚀 Starting deployment..."
+          set +e
           pnpm wrangler deploy -c wrangler-action.toml 2>&1 \
             | tee deploy.log \
             | grep -v "https://.*\.workers\.dev" \
-            | sed -E 's/env\.domain .*/env.domain (***)/' \
-            || true
+            | sed -E 's/env\.domain .*/env.domain (***)/'
           
           DEPLOY_EXIT_CODE=${PIPESTATUS[0]}
+          set -e
           if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
             exit 1
           fi
@@ -230,6 +238,10 @@ jobs:
           
           echo "worker_url=$WORKER_URL" >> $GITHUB_OUTPUT
           echo "✅ Setup completed."
+
+      - name: 🔐 同步 JWT 密钥 / Sync JWT secret
+        working-directory: ./mail-worker
+        run: printf '%s' "$JWT_SECRET" | pnpm wrangler secret put jwt_secret -c wrangler-action.toml
 
       - name: ♻️ 初始化数据库 / Initialize database
         run: |
@@ -254,9 +266,3 @@ jobs:
             exit 1
           fi
 
-      - name: 🗑️ 删除运行记录 / Delete workflow runs
-        uses: GitRML/delete-workflow-runs@main
-        continue-on-error: true
-        with:
-          retain_days: '1'
-          keep_minimum_runs: '0'
