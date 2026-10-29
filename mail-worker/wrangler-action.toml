@@ -48,4 +48,4 @@ admin = "${ADMIN}"
 project_link = "${PROJECT_LINK}"
 
 [build]
-command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"
+command = "pnpm --prefix ../mail-vue install --frozen-lockfile && pnpm --prefix ../mail-vue run build"
