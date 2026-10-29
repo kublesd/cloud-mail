@@ -243,7 +243,7 @@ jobs:
         working-directory: ./mail-worker
         run: printf '%s' "$JWT_SECRET" | pnpm wrangler secret put jwt_secret -c wrangler-action.toml
 
-      - name: ♻️ 初始化数据库 / Initialize database
+      - name: ♻️ 初始化与网站检查 / Initialize database and verify website
         run: |
           echo "🛠️ Starting database initialization..."
           sleep 15
