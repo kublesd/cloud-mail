@@ -1,5 +1,6 @@
 name: 🚀 Deploy cloud-mail to Cloudflare Workers
 
+# Fork 后需先在仓库 Actions 页面启用工作流，push 才会触发。
 on:
   push:
     branches: [ main ]
